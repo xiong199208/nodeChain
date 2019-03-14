@@ -26,10 +26,12 @@ class Blockchain{
 		const newBlock = this.generateNewBlock();
 		//区块合法并且区块链合法
 		if(this.isValidaBlock(newBlock) && this.isValidChain()) {
-			this.blockchain.push(newBlock)
+			let block = this.blockchain.push(newBlock)
+			return newBlock
 		} else{
 			 console.log('error,invalid Block')	
 		}
+		return
 	}
 	//生成新区块
 	generateNewBlock(){
@@ -63,12 +65,17 @@ class Blockchain{
 		.update(index+prevHash+timestamp+data+nonce)
 		.digest('hex')	
 	}
+	//校验区块hash
+	checkCompluteHash({index,prevHash,timestamp,data,nonce}) {
+		return this.compluteHash(index,prevHash,timestamp,data,nonce);
+	}
 	//校验区块
 	isValidaBlock(newBlock,lastBlock=this.getLastBlock()){
 		//1.区块的index等于最新的区块加1
 		//2.区块的time大于最新的区块
 		//3.最新区块的prevHash等于最新的区块的hash
 		//4.区块的hash值符合难度要求
+		//5.新区块的哈希值计算正确 
 		if(newBlock.index!==lastBlock.index+1) {
 			console.log("index",newBlock.index,lastBlock.index+1)
 			return false
@@ -80,6 +87,8 @@ class Blockchain{
 			return false
 		} else if(newBlock.hash.slice(0,this.difficulty)!=='0'.repeat(this.difficulty)) {
 			console.log("difficulty")
+			return false
+		} else if(newBlock.hash!==this.checkCompluteHash(newBlock)) {
 			return false
 		}
 		
@@ -104,8 +113,11 @@ class Blockchain{
 	}
 }
 
-let blockchain = new Blockchain();
-blockchain.mine()
-blockchain.mine()
-blockchain.mine()
-console.log(blockchain.blockchain)
+// let blockchain = new Blockchain();
+// blockchain.mine()
+// //blockchain.blockchain[1].nonce = 22
+// blockchain.mine()
+// blockchain.mine()
+// blockchain.mine()
+// console.log(blockchain.blockchain)
+module.exports = Blockchain
