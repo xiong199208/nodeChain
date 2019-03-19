@@ -41,6 +41,15 @@ vorpal
         callback()
     })
 vorpal
+    .command('blance <address>','查询余额')
+    .action(function(args,callback) {
+        const blance = blockchain.blance(args.address);
+        if(blance) {
+            formatLatLog({blance,address:args.address})
+        }
+        callback()
+    })
+vorpal
     .command('detail <index>','查看区块详情')
     .action(function(args,callback) {
         const block = blockchain.blockchain[args.index]
@@ -52,7 +61,9 @@ vorpal
     .command('trans<from> <to> <amount>','转账')
     .action(function(args,callback) {
         const transfer = blockchain.transfer(args.from,args.to,args.amount)
-        formatLatLog(transfer)
+        if(transfer) {
+            formatLatLog(transfer)
+        }
         callback()
     })
 

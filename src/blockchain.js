@@ -22,11 +22,39 @@ class Blockchain{
 		return this.blockchain[this.blockchain.length-1]
 	}
 
+	//转账
 	transfer(from,to,amount) {
+		if(from!=='0') {
+			const blance = this.blance(from);
+			if(blance<amount) {
+				console.log('noet enough blance',from,blance,amount);
+				return null;
+			}
+		}
 		//签名校验
 		const tansobj = {from,to,amount}
 		this.data.push(tansobj)
 		return tansobj
+	}
+
+	//查看余额
+	blance(address) {
+		let blance = 0;
+		this.blockchain.forEach(block=>{
+			if(!Array.isArray(block.data)) {
+				return
+			}
+			block.data.forEach(trans=>{
+				if(address==trans.from) {
+					blance -=trans.amount
+				}
+
+				if(address==trans.to) {
+					blance +=trans.amount
+				}
+			})
+		})
+		return blance
 	}
 
 	//挖矿
