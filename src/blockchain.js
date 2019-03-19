@@ -17,16 +17,27 @@ class Blockchain{
 		//const hash = this.compluteHash(0,'0',new Date().getTime(),'hello world',1)
 		//console.log(hash)
 	}
-
+	//获取最新得区块
 	getLastBlock() {
 		return this.blockchain[this.blockchain.length-1]
 	}
+
+	transfer(from,to,amount) {
+		//签名校验
+		const tansobj = {from,to,amount}
+		this.data.push(tansobj)
+		return tansobj
+	}
+
 	//挖矿
-	mine(){
+	mine(address){
+
+		this.transfer('0',address,100)
 		const newBlock = this.generateNewBlock();
 		//区块合法并且区块链合法
 		if(this.isValidaBlock(newBlock) && this.isValidChain()) {
 			let block = this.blockchain.push(newBlock)
+			this.data = []
 			return newBlock
 		} else{
 			 console.log('error,invalid Block')	

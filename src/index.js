@@ -17,7 +17,7 @@ function formatLatLog(data) {
       , colWidths: new Array(head.length).fill(15)
     });
     const res = data.map(d=>{
-        return head.map(h=>d[h])
+        return head.map(h=>JSON.stringify(d[h],null,1))
     })
     // table is an Array, so you can `push`, `unshift`, `splice` and friends
     table.push(...res);
@@ -26,9 +26,9 @@ function formatLatLog(data) {
 }
 
 vorpal
-    .command('mine','挖矿')
+    .command('mine <address>','挖矿')
     .action(function(args,callback) {
-        const block = blockchain.mine()
+        const block = blockchain.mine(args.address)
         if(block) {
             formatLatLog(block)
         }
@@ -38,6 +38,21 @@ vorpal
     .command('chain','查看区块链')
     .action(function(args,callback) {
         formatLatLog(blockchain.blockchain)
+        callback()
+    })
+vorpal
+    .command('detail <index>','查看区块详情')
+    .action(function(args,callback) {
+        const block = blockchain.blockchain[args.index]
+        console.log(JSON.stringify(block,null,2))
+        callback()
+    })
+
+ vorpal
+    .command('trans<from> <to> <amount>','转账')
+    .action(function(args,callback) {
+        const transfer = blockchain.transfer(args.from,args.to,args.amount)
+        formatLatLog(transfer)
         callback()
     })
 
