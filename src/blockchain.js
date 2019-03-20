@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const dgram = require('dgram')
 const initBlock = {
   index: 0,
   data: 'hello chain!',
@@ -14,9 +15,68 @@ class Blockchain{
 		]
 		this.data = []
 		this.difficulty = 3
+		//所有网络节点
+		this.peers = []
+		//种子节点
+		this.seed = {port:8001,address:'localhost'}
+		this.udp = dgram.createSocket('udp4')
+		this.init()
 		//const hash = this.compluteHash(0,'0',new Date().getTime(),'hello world',1)
 		//console.log(hash)
 	}
+
+	init() {
+		this.bindP2p()
+		this.bindExit()
+	}
+
+	bindP2p() {
+		this.udp.on('message',(data,remote)=>{
+			const {address,port} = remote
+			const action = JSON.parse(data)
+			if(action.type) {
+				this.dispatch(action,{address,port})
+			}
+		})
+		this.udp.on('listening',()=>{
+			const address = this.udp.address()
+			console.log('udp信息：udp监听完毕：'+JSON.stringify(address))
+		})
+		//区分种子节点和普通节点
+		const port = Number(process.argv[2]) || 0
+		this.startNode(port)
+	}
+	//启动节点
+	startNode(port) {
+		this.udp.bind(port)
+		if(port!==8001) {
+			this.send({
+				type:'newpeer'
+			},this.seed.port,this.seed.address)
+		}
+	}
+
+	send(message,port,address) {
+		this.udp.send(JSON.stringify(message),port,address)
+	}
+
+	//分发消息
+	dispatch(action,remote) {
+		switch(action.type) {
+			case 'newpeer':
+			console.log('新节点接入',remote)
+			break
+			default:
+			console.log('无法识别的消息类型')
+		}
+	}
+
+	bindExit() {
+		process.on('exit',()=>{
+			console.log("udp信息：udp退出")
+		})
+	}
+
 	//获取最新得区块
 	getLastBlock() {
 		return this.blockchain[this.blockchain.length-1]
@@ -32,6 +92,8 @@ class Blockchain{
 			}
 		}
 		//签名校验
+
+
 		const tansobj = {from,to,amount}
 		this.data.push(tansobj)
 		return tansobj
@@ -152,11 +214,4 @@ class Blockchain{
 	}
 }
 
-// let blockchain = new Blockchain();
-// blockchain.mine()
-// //blockchain.blockchain[1].nonce = 22
-// blockchain.mine()
-// blockchain.mine()
-// blockchain.mine()
-// console.log(blockchain.blockchain)
 module.exports = Blockchain
