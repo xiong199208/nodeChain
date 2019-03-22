@@ -1,5 +1,6 @@
 const crypto = require('crypto')
 const dgram = require('dgram')
+const rsa = require('./rsa')
 const initBlock = {
   index: 0,
   data: 'hello chain!',
@@ -17,6 +18,7 @@ class Blockchain{
 		this.difficulty = 3
 		//所有网络节点
 		this.peers = []
+		this.remote = {} 
 		//种子节点
 		this.seed = {port:8001,address:'localhost'}
 		this.udp = dgram.createSocket('udp4')
@@ -59,16 +61,69 @@ class Blockchain{
 	send(message,port,address) {
 		this.udp.send(JSON.stringify(message),port,address)
 	}
+	//广播所有节点
+	boardcast(action) {
+		this.peers.forEach(v=>{
+			this.send(action,v.port,v.address)
+		})
+	}
 
 	//分发消息
 	dispatch(action,remote) {
 		switch(action.type) {
 			case 'newpeer':
-			console.log('新节点接入',remote)
+				//1.公网ip和port
+				this.send({
+					type:'remoteAddress',
+					data:remote
+				},remote.port,remote.address)
+				//2.全部节点列表
+				this.send({
+					type:'peerList',
+					data:this.peers
+				},remote.port,remote.address)
+				//3/告诉所有所有已知节点，来了新人
+				this.boardcast({
+					type:'hello',
+					data:remote
+				})
+
+				this.peers.push(remote)
+				console.log('新节点接入',remote)
+			break
+			case 'remoteAddress':
+				//储存远程消息
+				this.remote = action.data
+			break
+			case 'peerList':
+				 //当前节点列表
+				 const newpeers = action.data
+				 this.addPeers(newpeers)
+			break
+			case 'hello':
+				 let remotedata = action.data
+				 this.peers.push(remotedata)
+				 console.log('新朋友来了')
+				 this.send({type:'hi',data:remote},remotedata.port,remotedata.address)
+			break
+			case 'hi':
+				console.log(`${remote.address}:${remote.port}:${action.data}`)
 			break
 			default:
 			console.log('无法识别的消息类型')
 		}
+	}
+
+	isEqualPeer(peer1,peer2) {
+		return peer1.address===peer2.address && peer1.port===peer2.port
+	}
+
+	addPeers(peers) {
+		peers.forEach(peer=>{
+			if(!this.peers.find(v=>this.isEqualPeer(peer,v))) {
+				this.peers.push(peer)
+			}
+		})
 	}
 
 	bindExit() {
@@ -90,13 +145,14 @@ class Blockchain{
 				console.log('noet enough blance',from,blance,amount);
 				return null;
 			}
+			
 		}
 		//签名校验
-
-
-		const tansobj = {from,to,amount}
-		this.data.push(tansobj)
-		return tansobj
+		//const tansobj = {from,to,amount}
+		const signature = rsa.sign({from,to,amount})
+		const signTrans = {from,to,amount,signature}
+		this.data.push(signTrans)
+		return signTrans
 	}
 
 	//查看余额
@@ -119,13 +175,26 @@ class Blockchain{
 		return blance
 	}
 
-	//挖矿
-	mine(address){
+	isValidTransfer(trans) {
+		//是不是合法的转账
+		//地址即是公钥
+		return rsa.verify(trans,rsa.rsaKey.pub)
+	}
 
-		this.transfer('0',address,100)
+	//挖矿
+	mine(){
+		//检测交易合法性
+		// if(!this.data.every(v=>this.isValidTransfer(v))) {
+		// 	console.log('trans not valid')
+		// 	return
+		// }
+		this.data = this.data.filter(v=>this.isValidTransfer(v))
+
+
+		this.transfer('0',rsa.rsaKey.pub,100)
 		const newBlock = this.generateNewBlock();
 		//区块合法并且区块链合法
-		if(this.isValidaBlock(newBlock) && this.isValidChain()) {
+		if(this.isValidTransfer && this.isValidaBlock(newBlock) && this.isValidChain()) {
 			let block = this.blockchain.push(newBlock)
 			this.data = []
 			return newBlock
