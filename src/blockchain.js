@@ -55,10 +55,13 @@ class Blockchain{
 			this.send({
 				type:'newpeer'
 			},this.seed.port,this.seed.address)
+			//把种子节点加入到列表中
+			this.peers.push(this.seed)
 		}
 	}
 
 	send(message,port,address) {
+		//console.log('send',message,port,address)
 		this.udp.send(JSON.stringify(message),port,address)
 	}
 	//广播所有节点
@@ -87,9 +90,23 @@ class Blockchain{
 					type:'hello',
 					data:remote
 				})
+				//4告诉现有区块链的数据
+				this.send({
+					type:'blockchain',
+					data:JSON.stringify({
+						blockchain:this.blockchain,
+						//trans:this.data
+					})
+				},remote.port,remote.address)
 
 				this.peers.push(remote)
 				console.log('新节点接入',remote)
+			break
+			case 'blockchain':
+				//同步本地链
+				let allData = JSON.parse(action.data)
+				let newChain = allData.blockchain
+				this.replaceChain(newChain)
 			break
 			case 'remoteAddress':
 				//储存远程消息
@@ -107,7 +124,7 @@ class Blockchain{
 				 this.send({type:'hi',data:remote},remotedata.port,remotedata.address)
 			break
 			case 'hi':
-				console.log(`${remote.address}:${remote.port}:${action.data}`)
+				console.log(`${remote.address}:${remote.port}:${JSON.stringify(action.data)}`)
 			break
 			default:
 			console.log('无法识别的消息类型')
@@ -280,6 +297,17 @@ class Blockchain{
 		}
 
 		return true;
+	}
+	replaceChain(newChain) {
+		if(newChain.length===1) {
+			return
+		}
+		if(this.isValidChain(newChain) && newChain.length>this.blockchain.length) {
+			//拷贝
+			this.blockchain = JSON.parse(JSON.stringify(newChain))
+		} else{
+			console.log("错误：不合法链")
+		}
 	}
 }
 

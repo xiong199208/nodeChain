@@ -6,6 +6,9 @@ const rsa = require('./rsa')
 
 //格式化控制台输出
 function formatLatLog(data) {
+    if(!data || data.length==0) {
+        return
+    }
     if(!Array.isArray(data)) {
         data = [data]
     }
@@ -78,13 +81,21 @@ vorpal
         callback()
     })
 
-
-// vorpal
-//     .command('hello','你好')
-//     .action(function(args,callback) {
-//         this.log('你好，vorpal')
-//         callback
-//     })
+vorpal
+    .command('peers','查看网络节点列表')
+    .action(function(args,callback) {
+        formatLatLog(blockchain.peers)
+        callback()
+    })
+vorpal
+    .command('chat <msg>','')
+    .action(function(args,callback) {
+        blockchain.boardcast({
+            type:'hi',
+            data:args.msg
+        })
+        callback()
+    })
 
 console.log('welcome to chain')
 vorpal.exec('help')   
