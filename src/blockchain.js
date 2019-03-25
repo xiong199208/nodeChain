@@ -95,7 +95,7 @@ class Blockchain{
 					type:'blockchain',
 					data:JSON.stringify({
 						blockchain:this.blockchain,
-						//trans:this.data
+						trans:this.data
 					})
 				},remote.port,remote.address)
 
@@ -106,7 +106,9 @@ class Blockchain{
 				//同步本地链
 				let allData = JSON.parse(action.data)
 				let newChain = allData.blockchain
+				let newTrans = allData.trans
 				this.replaceChain(newChain)
+				this.replaceTrans(newTrans)
 			break
 			case 'remoteAddress':
 				//储存远程消息
@@ -126,18 +128,61 @@ class Blockchain{
 			case 'hi':
 				console.log(`${remote.address}:${remote.port}:${JSON.stringify(action.data)}`)
 			break
+			case 'trans':
+				//网络收到的交易请求
+				if(!this.data.find(v=>this.isEqualObj(v,action.data))) {
+					
+					let checkTrans = this.addTrans(action.data)
+					if(checkTrans) {
+						console.log('有新交易信息')
+						this.boardcast({
+							type:'trans',
+							data:action.data
+						})
+					} else{
+						console.log('新交易不合法')
+					}
+					
+				}
+			break
+			case 'mine':
+				//网络有人挖矿成功
+				const lastBlock = this.getLastBlock()
+				if (lastBlock.hash===action.data.hash) {
+					//重复消息
+					return
+				}
+				if(this.isValidaBlock(action.data)) {
+					console.log('有人挖矿成功')
+					this.blockchain.push(action.data)
+					//清除本地消息
+					this.data = []
+					this.boardcast({
+						type:'mine',
+						data:action.data
+					})
+				} else{
+					console.log("挖矿区块不合法")
+				}
+
+			break
 			default:
 			console.log('无法识别的消息类型')
 		}
 	}
-
-	isEqualPeer(peer1,peer2) {
-		return peer1.address===peer2.address && peer1.port===peer2.port
+	
+	isEqualObj(obj1,obj2) {
+		const key1 = Object.keys(obj1)
+		const key2 = Object.keys(obj2)
+		if(key1.length!==key2.length) {
+			return false
+		}
+		return key1.every(key=>obj1[key]===obj2[key])
 	}
 
 	addPeers(peers) {
 		peers.forEach(peer=>{
-			if(!this.peers.find(v=>this.isEqualPeer(peer,v))) {
+			if(!this.peers.find(v=>this.isEqualObj(peer,v))) {
 				this.peers.push(peer)
 			}
 		})
@@ -156,20 +201,35 @@ class Blockchain{
 
 	//转账
 	transfer(from,to,amount) {
+		const timestamp = new Date().getTime()
+
+		//签名校验
+		//const tansobj = {from,to,amount}
+		const signature = rsa.sign({from,to,amount,timestamp})
+		const signTrans = {from,to,amount,timestamp,signature}
 		if(from!=='0') {
 			const blance = this.blance(from);
 			if(blance<amount) {
 				console.log('noet enough blance',from,blance,amount);
 				return null;
 			}
-			
+			this.boardcast({
+				type:'trans',
+				data:signTrans
+			})
 		}
-		//签名校验
-		//const tansobj = {from,to,amount}
-		const signature = rsa.sign({from,to,amount})
-		const signTrans = {from,to,amount,signature}
+		
 		this.data.push(signTrans)
 		return signTrans
+	}
+
+	addTrans(trans) {
+		if(this.isValidTransfer(trans)) {
+			this.data.push(trans)
+			return true
+		} else{
+			return false
+		}
 	}
 
 	//查看余额
@@ -214,10 +274,16 @@ class Blockchain{
 		if(this.isValidTransfer && this.isValidaBlock(newBlock) && this.isValidChain()) {
 			let block = this.blockchain.push(newBlock)
 			this.data = []
+			console.log("信息：挖矿成功")
+			this.boardcast({
+				type:'mine',
+				data:newBlock
+			})
 			return newBlock
 		} else{
 			 console.log('error,invalid Block')	
 		}
+
 		return
 	}
 	//生成新区块
@@ -298,6 +364,7 @@ class Blockchain{
 
 		return true;
 	}
+
 	replaceChain(newChain) {
 		if(newChain.length===1) {
 			return
@@ -307,6 +374,12 @@ class Blockchain{
 			this.blockchain = JSON.parse(JSON.stringify(newChain))
 		} else{
 			console.log("错误：不合法链")
+		}
+	}
+
+	replaceTrans(trans) {
+		if(trans.every(v=>this.isValidTransfer(v))) {
+			this.data = trans
 		}
 	}
 }

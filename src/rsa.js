@@ -39,17 +39,17 @@ function generateKeys() {
 }
 //console.log(rsaKey())
 //签名
-function sign({from,to,amount},prv=rsaKey.prv) {
+function sign({from,to,amount,timestamp},prv=rsaKey.prv) {
     const keypairTemp = ec.keyFromPrivate(prv)
-    const buffferMsg = Buffer.from(`${from}-${to}-${amount}`)
+    const buffferMsg = Buffer.from(`${timestamp}-${from}-${to}-${amount}`)
     let hexSignature = Buffer.from(keypairTemp.sign(buffferMsg).toDER()).toString('hex')
   return hexSignature
 }
 //校验签名
-function verify({from,to,amount,signature},pub) {
+function verify({from,to,amount,timestamp,signature},pub) {
     //生成临时公钥对
     const keypairTemp = ec.keyFromPublic(pub,'hex')
-    const bufferMsg = Buffer.from(`${from}-${to}-${amount}`)
+    const bufferMsg = Buffer.from(`${timestamp}-${from}-${to}-${amount}`)
     
     return keypairTemp.verify(bufferMsg,signature)
 }

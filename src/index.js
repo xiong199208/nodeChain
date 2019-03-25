@@ -88,12 +88,18 @@ vorpal
         callback()
     })
 vorpal
-    .command('chat <msg>','')
+    .command('chat <msg>','和其他节点发送消息')
     .action(function(args,callback) {
         blockchain.boardcast({
             type:'hi',
             data:args.msg
         })
+        callback()
+    })
+vorpal
+    .command('pending','查看还未打包的交易')
+    .action(function(args,callback) {
+        formatLatLog(blockchain.data)
         callback()
     })
 
