@@ -1,4 +1,4 @@
- let fs = require('fs')
+let fs = require('fs')
 let EC = require('elliptic').ec
 let ec = new EC('secp256k1')
 let keypair = ec.genKeyPair()
@@ -59,8 +59,8 @@ function verify ({ from, to, amount, timestamp, sig }) {
   // return keypairTemp.verify(binaryMessage, sig)
 }
 module.exports = { keys, sign, verify, signMsg, verifyMsg, getPub }
-const trans = {from:"048d0cff7bbf76bd485e493ed18855aad9823513caba01a68e6ee21fec7669b6e891ec38c6bd02697b38c4a54be39d9c982993de10bce771ddca379f4a70152e09",to:"test1",amount:15,timestamp:"test"}
-//const trans1 = {from:"test3",to:"test2",imooc:100}
+const trans = { from: '048d0cff7bbf76bd485e493ed18855aad9823513caba01a68e6ee21fec7669b6e891ec38c6bd02697b38c4a54be39d9c982993de10bce771ddca379f4a70152e09', to: 'test1', amount: 15, timestamp: 'test' }
+// const trans1 = {from:"test3",to:"test2",imooc:100}
 const signature = sign(trans)
 trans.sig = signature
 console.log(signature)
